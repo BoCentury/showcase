@@ -1,5 +1,3 @@
-This is a centralised showcase of my projects.
-
 ## Projects
 
 - [Show Muted](https://github.com/BoCentury/showmuted): A simple program that shows if your mic is muted by changing colours.
