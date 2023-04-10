@@ -1,0 +1,153 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.0.2/TweenLite.min.js"></script>
+<script type="text/javascript" src="Winwheel.modified.js"></script>
+
+<style>
+
+
+body {
+    background-color: hsl(0deg 0% 13%);
+    color: hsl(210deg 14% 70%);
+	font-family: arial;
+	font-size: smaller;
+}
+
+table, input, button {
+	font-size: inherit;
+}
+
+input[type="number"] {
+	width: 4.5em;
+}
+
+input[type="range"] {
+    width: 360px;
+}
+
+input[type="radio"] {
+    height: 16px;
+}
+
+.segment_info_row {
+    background-color: hsl(0deg 0% 20%);
+    border: 1px solid hsl(0deg 0% 20%);
+    padding:6px;
+    margin-top: 10px;
+}
+
+.segment_info_row:hover {
+    background-color: hsl(0deg 0% 25%);
+    border: 1px solid hsl(0deg 0% 25%);
+}
+
+.segment_info_row_selected {
+    border: 1px solid hsl(212deg 100% 50%) !important;
+}
+
+.segment_info_row_0 {
+}
+
+.segment_info_row_1 {
+    margin-top: 5px;
+    margin-left: 23px;
+}
+
+.tips {
+	margin-top: 0.3em;
+	font-size: medium !important;
+}
+
+.smol_button {
+    font-size: 11px;
+}
+
+</style>
+
+<div style="display:inline-flex;">
+<div id="container">
+<canvas id="canvas" width="600" height="600" style="margin:20px;">Canvas not supported</canvas>
+<img id="arrow" style="position: absolute; z-index: 999;">
+</div>
+<div>
+	<button onclick="reset_wheel(); spin_wheel();">Spin the Wheel</button>
+	<button onclick="reset_wheel();">Reset</button>
+	<input type="text" id="segtext_input" placeholder="Paste segment text here" style="margin-left:50px">
+	<button onclick="read_segment_text();">Read segment text</button>
+	<button onclick="old_read_segment_text();">;old</button>
+	<div class="tips">Tips:</div>
+	<div class="tips">Hover your mouse over stuff if you're not sure what it is.</div>
+	<div class="tips">The first and last borders will always be fixed to 0 and 360 degrees respectively. Thats why it starts of with two grayed out sliders.</div>
+	<div class="tips">The 'Split' button splits the segment in half. This is how you make more segments (that aren't grayed out).</div>
+	<div class="tips">Click the dots to the left of the sliders to move that border to the arrow. (the best way to line stuff up)</div>
+	<div class="tips">Pressing ENTER after pasting segment text works too. Same with testing TTS.</div>
+	<br>
+    <div style="">
+        <div>
+            <label for="weirdseg">Hitbox mode: </label>
+            <input type="checkbox" id="hitbox_mode" onchange="set_mode(this.checked)">
+        </div>
+        <div>
+            <label for="segnum">Selected segment border: </label>
+            <input type="number" id="segnum" min="0" value="0" checked="" oninput="
+                if(this.valueAsNumber === 0) $('radio_0').checked = true;
+                else the_segs[this.valueAsNumber].$radio.checked = true;
+                draw_wheel_at_segment_border();
+            " style="width:2.5em" max="6">
+        </div>
+        <div>
+            <button onclick="set_all_segments_to_same_size();">Set all segments to the same size</button>
+        </div>
+        <div>
+            Line settings:
+            <input type="number" step="1" value="5" oninput="set_wheel_number_property('segment_outline_width',    this, 1)" title="Line thiccness in pixels">
+            <input type="text" value="#d6c24e" oninput="set_wheel_text_property('segment_outline_colour', this, '#d6c24e')" title="Line colour. Can be any CSS colour value.">
+        </div>
+        <div>
+            Text settings:
+            <input type="number" step="1" value="53" oninput="set_wheel_number_property('text_font_size',    this, 24)" title="Font size.">
+            <input type="text" value="Gadugi Regular" oninput="set_wheel_text_property('text_font_family', this, 'Gadugi Regular')" title="Font family.">
+            <input type="text" value="normal" oninput="set_wheel_text_property('text_font_weight', this, 'normal')" title="Font weight. 'normal', 'bold', [1,1000].">
+            <input type="text" value="#d6c24e" oninput="set_wheel_text_property('text_font_colour', this, '#d6c24e')" title="Font colour. Can be any CSS colour value.">
+        </div>
+        <!--div>
+            <label>Segment rotation offset: </label>
+            <input id="imgrot_rng" type="range" title="The angle" min="-180" max="180" value="0" oninput="callback_image_rotation(this.valueAsNumber, true)">
+            <input id="imgrot_num" type="number" title="The angle" min="-180" max="180" step="0.1" value="0" oninput="callback_image_rotation(this.valueAsNumber, false)">
+        </div-->
+        <br><div>
+            <input type="radio" name="showseg" value="0" id="radio_0" checked>
+            Lock to angle 0
+        </div>
+        <div id="segment_info">
+        </div>
+    </div>
+	<br>
+	<button onclick="generate_segment_text();">Generate segment text</button>
+	<button onclick="generate_segment_text_with_visual_text();">+visual</button>
+	<button onclick="old_generate_segment_text();">;old</button>
+	<div id="segtext_output" style="visibility:hidden;">
+		<input type="text">
+		<button onclick="navigator.clipboard.writeText($('segtext_output').children[0].value);">Copy</button>
+	</div>
+    <div>
+        Wheel: <input type="file" accept="image/png, image/jpeg" id="fileInputWheel">
+        <input type="number" step="0.01" value="1.0" placeholder="1.0" style="width:4.5em" oninput="set_wheel_number_property('image_scale',    this, 1)" title="Scale (size) of the image">
+        <input type="number" step="1.00" value="0"   placeholder="0"   style="width:5.5em" oninput="set_wheel_number_property('image_offset_x', this, 0)" title="X offset">
+        <input type="number" step="1.00" value="0"   placeholder="0"   style="width:5.5em" oninput="set_wheel_number_property('image_offset_y', this, 0)" title="Y offset">
+	</div>
+    <div>
+        Arrow: <input type="file" accept="image/png, image/jpeg" id="fileInputArrow">
+        <input type="number" step="1" value="0"   placeholder="0" style="width:5.5em" oninput="arrow_offset_x = this.valueAsNumber; update_arrow_position()" title="X offset">
+        <input type="number" step="1" value="-51" placeholder="0" style="width:5.5em" oninput="arrow_offset_y = this.valueAsNumber; update_arrow_position()" title="Y offset">
+	</div>
+    <div>
+        Seg images: <input type="file" accept="image/png, image/jpeg" id="fileInputSegImages" multiple>
+	</div>
+    <div>
+        <button id="save">Save</button>
+     </div>
+    <div>
+        <canvas id="circle_canvas"></canvas>
+    </div>
+</div>
+</div>
+<script type="text/javascript" src="web_app.js"></script>
